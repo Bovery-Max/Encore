@@ -1,141 +1,143 @@
-# Encore — Kârlılık & ROI Hesaplayıcı
+# Encore — Profitability & ROI Calculator
 
-Encore, etkinlik, sahne gösterisi, festival ve kurumsal aktivite gibi projelerin **maliyet, gelir, kâr marjı ve geri ödeme süresini** hesaplayan bir web uygulamasıdır. Projeler bir **SQLite** veritabanında saklanır ve **Flask** ile yazılmış bir REST API üzerinden yönetilir.
+Encore is a web application that calculates the **cost, revenue, profit margin and payback period** of projects such as events, stage shows, festivals and corporate activities. Projects are stored in a **SQLite** database and managed through a REST API built with **Flask**.
 
-Uygulamanın iki modu var:
+The application has two modes:
 
-- **Basit Hesaplama:** 5 soruda "kârda mıyım?" sorusunu cevaplar.
-- **Gelişmiş Mod:** personel, sabit gider, prodüksiyon, bilet kesintileri ve aylık gelir projeksiyonunu ayrıntılı olarak modelleyen, birden çok proje kaydedebilen bir ROI hesaplayıcı.
+- **Simple Calculation:** answers "am I making a profit?" in 5 questions.
+- **Advanced Mode:** a multi-project ROI calculator that models personnel, fixed costs, production, ticket deductions and monthly revenue projections in detail.
 
-![Özet P&L](docs/screenshots/06-ozet-pl.png)
+> The user interface is in Turkish.
+
+![Summary P&L](docs/screenshots/06-ozet-pl.png)
 
 ---
 
-## İçindekiler
+## Table of Contents
 
-- [Özellikler](#özellikler)
-- [Ekran Görüntüleri](#ekran-görüntüleri)
-- [Kullanılan Teknolojiler](#kullanılan-teknolojiler)
-- [Veritabanı Tasarımı](#veritabanı-tasarımı)
+- [Features](#features)
+- [Screenshots](#screenshots)
+- [Tech Stack](#tech-stack)
+- [Database Design](#database-design)
 - [REST API](#rest-api)
-- [Güvenlik](#güvenlik)
-- [Kurulum ve Çalıştırma](#kurulum-ve-çalıştırma)
-- [Proje Yapısı](#proje-yapısı)
-- [Hesaplama Mantığı](#hesaplama-mantığı)
+- [Security](#security)
+- [Installation & Running](#installation--running)
+- [Project Structure](#project-structure)
+- [Calculation Logic](#calculation-logic)
 
 ---
 
-## Özellikler
+## Features
 
-**Basit mod**
-- Adım adım ilerleyen 5 soruluk akış: toplam maliyet, bilet fiyatı, kesinti oranı, satış adedi ve isteğe bağlı hedef kâr marjı
-- Satış adedi doğrudan ya da `Gün × Kişi × Seans` formülüyle girilebilir
-- Net birim fiyat, toplam gelir, net kâr ve kâr marjı anında hesaplanır
-- Sonuç Excel'e aktarılabilir veya tek tıkla Gelişmiş Mod'a yeni proje olarak taşınabilir
+**Simple mode**
+- Step-by-step 5-question flow: total cost, ticket price, deduction rate, sales quantity and an optional target profit margin
+- Sales quantity can be entered directly or with the `Days × People × Sessions` formula
+- Net unit price, total revenue, net profit and profit margin are calculated instantly
+- Results can be exported to Excel or moved to Advanced Mode as a new project with one click
 
-**Gelişmiş mod**
-- Birden çok projeyi kaydetme, yükleme ve silme (veriler sunucudaki SQLite veritabanında tutulur)
-- Yazdıkça otomatik kayıt
-- 7 sekme: Personel Gideri, Sabit Aylık Giderler, Prodüksiyon Maliyetleri, Bilet & Kesintiler, Gelir Projeksiyonu, Özet P&L, Maliyet Ayarları
-- Personel maliyetlerine SGK işveren payı (%20,5) otomatik eklenebilir
-- Kesintiler (KDV, rusum, komisyon, stopaj vb.) tek tek açılıp kapatılabilir
-- TL / USD / EUR görüntüleme desteği
-- **Şablon kütüphanesi:** sık kullanılan kalemler ve fiyatları kaydedilir, yeni projelerde öneri olarak çıkar
-- Aynı kategorideki başka projelerden kalem çekme
-- Bütçe teklifi formatında, biçimlendirilmiş ve logolu **Excel çıktısı** (müşteriye gösterilmeyecek gelir/kâr verileri ayrı sayfalarda)
-- Mobil uyumlu arayüz
-
----
-
-## Ekran Görüntüleri
-
-### Basit Hesaplama
-Sorular cevaplandıkça bir sonraki açılır. En sonda kâr/zarar sonucu gösterilir.
-
-![Basit mod](docs/screenshots/01-basit-mod.png)
-
-### Yeni Proje
-Proje adı, tarih ve proje tarih aralığı girilmeden hesaplama sekmeleri açılmaz.
-
-![Yeni proje](docs/screenshots/08-yeni-proje.png)
-
-### Personel Gideri
-![Personel gideri](docs/screenshots/02-personel.png)
-
-### Prodüksiyon Maliyetleri
-![Prodüksiyon maliyetleri](docs/screenshots/03-produksiyon.png)
-
-### Bilet & Kesintiler
-![Bilet ve kesintiler](docs/screenshots/04-bilet-kesintiler.png)
-
-### Gelir Projeksiyonu
-![Gelir projeksiyonu](docs/screenshots/05-gelir-projeksiyonu.png)
-
-### Özet P&L
-![Özet P&L](docs/screenshots/06-ozet-pl.png)
-
-### Maliyet Ayarları (Şablon Kütüphanesi)
-![Maliyet ayarları](docs/screenshots/07-maliyet-ayarlari.png)
+**Advanced mode**
+- Save, load and delete multiple projects (data is stored in the server-side SQLite database)
+- Autosave while typing
+- 7 tabs: Personnel Costs, Fixed Monthly Costs, Production Costs, Tickets & Deductions, Revenue Projection, Summary P&L, Cost Settings
+- Employer social security contribution (SGK, 20.5%) can be added to personnel costs automatically
+- Deductions (VAT, municipal tax, commissions, withholding tax, etc.) can be toggled individually
+- Display in TRY / USD / EUR
+- **Template library:** frequently used items and their prices are saved and suggested in new projects
+- Pull items from other projects in the same category
+- Formatted **Excel export** with logo in a budget-proposal layout (internal revenue/profit data that should not be shown to the client is kept on separate sheets)
+- Mobile-friendly interface
 
 ---
 
-## Kullanılan Teknolojiler
+## Screenshots
 
-| Katman | Teknoloji |
+### Simple Calculation
+Each question opens after the previous one is answered. The profit/loss result is shown at the end.
+
+![Simple mode](docs/screenshots/01-basit-mod.png)
+
+### New Project
+The calculation tabs stay locked until the project name, date and project date range are entered.
+
+![New project](docs/screenshots/08-yeni-proje.png)
+
+### Personnel Costs
+![Personnel costs](docs/screenshots/02-personel.png)
+
+### Production Costs
+![Production costs](docs/screenshots/03-produksiyon.png)
+
+### Tickets & Deductions
+![Tickets and deductions](docs/screenshots/04-bilet-kesintiler.png)
+
+### Revenue Projection
+![Revenue projection](docs/screenshots/05-gelir-projeksiyonu.png)
+
+### Summary P&L
+![Summary P&L](docs/screenshots/06-ozet-pl.png)
+
+### Cost Settings (Template Library)
+![Cost settings](docs/screenshots/07-maliyet-ayarlari.png)
+
+---
+
+## Tech Stack
+
+| Layer | Technology |
 |---|---|
-| Veritabanı | SQLite (Python `sqlite3` modülü) |
+| Database | SQLite (Python `sqlite3` module) |
 | Backend | Python, Flask |
-| Frontend | HTML, CSS, JavaScript (framework kullanılmadı) |
-| Excel çıktısı | SheetJS, JSZip, ExcelJS |
-| Arka plan animasyonu | WebGL shader |
+| Frontend | HTML, CSS, JavaScript (no framework) |
+| Excel export | SheetJS, JSZip, ExcelJS |
+| Background animation | WebGL shader |
 
 ---
 
-## Veritabanı Tasarımı
+## Database Design
 
-Uygulama `encore.db` adında bir SQLite veritabanı kullanır. Veritabanı ve tablo, uygulama ilk çalıştığında otomatik oluşturulur.
+The application uses a SQLite database named `encore.db`. The database and table are created automatically on first run.
 
 ```sql
 CREATE TABLE IF NOT EXISTS projeler (
-    id         TEXT PRIMARY KEY,  -- örn. job_1732272000000_ab12c
-    name       TEXT,              -- proje adı
-    created_at TEXT,              -- ISO 8601 oluşturulma zamanı
-    data       TEXT               -- projenin tüm içeriği (JSON)
+    id         TEXT PRIMARY KEY,  -- e.g. job_1732272000000_ab12c
+    name       TEXT,              -- project name
+    created_at TEXT,              -- ISO 8601 creation time
+    data       TEXT               -- full project content (JSON)
 );
 ```
 
-| Sütun | Tip | Açıklama |
+| Column | Type | Description |
 |---|---|---|
-| `id` | TEXT (PK) | Projenin benzersiz kimliği (istemci tarafında üretilir) |
-| `name` | TEXT | Proje adı |
-| `created_at` | TEXT | Oluşturulma tarihi. Listeleme bu sütuna göre yeniden eskiye sıralanır |
-| `data` | TEXT | Personel, gider, kesinti ve gelir satırlarının tamamı JSON olarak |
+| `id` | TEXT (PK) | Unique project identifier (generated on the client) |
+| `name` | TEXT | Project name |
+| `created_at` | TEXT | Creation date. Projects are listed newest first by this column |
+| `data` | TEXT | All personnel, cost, deduction and revenue rows as JSON |
 
-**Tasarım kararı:** Bir projenin alt kalemleri (personel satırları, prodüksiyon kategorileri, kesintiler, gelir ayları) değişken sayıda ve yapıdadır. Bu yüzden sorgulanan alanlar (`id`, `name`, `created_at`) ayrı sütunlarda tutuluyor, projenin geri kalanı tek bir JSON belgesi olarak `data` sütununda saklanıyor. Kayıt işlemi `INSERT OR REPLACE` ile yapıldığı için aynı `id` ile gelen istek mevcut kaydı günceller. Tüm sorgularda SQL enjeksiyonuna karşı parametreli sorgu (`?`) kullanılır.
+**Design decision:** A project's sub-items (personnel rows, production categories, deductions, revenue months) vary in number and structure. So the queried fields (`id`, `name`, `created_at`) live in their own columns, and the rest of the project is stored as a single JSON document in the `data` column. Saving uses `INSERT OR REPLACE`, so a request with an existing `id` updates that record. All queries use parameterized statements (`?`) to prevent SQL injection.
 
 ---
 
 ## REST API
 
-| Metot | Uç Nokta | Açıklama |
+| Method | Endpoint | Description |
 |---|---|---|
-| `GET` | `/api/projeler` | Tüm projeleri yeniden eskiye sıralı döndürür |
-| `POST` | `/api/projeler` | Projeyi ekler, aynı `id` varsa günceller |
-| `DELETE` | `/api/projeler/<proje_id>` | Projeyi siler |
+| `GET` | `/api/projeler` | Returns all projects, newest first |
+| `POST` | `/api/projeler` | Creates a project, or updates it if the `id` already exists |
+| `DELETE` | `/api/projeler/<proje_id>` | Deletes a project |
 
-**Örnek istek:**
+**Example request:**
 
 ```bash
 curl -X POST http://localhost:5001/api/projeler \
   -H "Content-Type: application/json" \
-  -d '{"id": "job_1", "name": "Orman Yürüyüşü 2026", "createdAt": "2026-11-20T10:00:00Z"}'
+  -d '{"id": "job_1732272000000_ab12c", "name": "Forest Walk 2026", "createdAt": "2026-11-20T10:00:00Z"}'
 ```
 
 ```json
 {"durum": "kaydedildi"}
 ```
 
-Geçersiz bir istek `400` döner:
+An invalid request returns `400`:
 
 ```json
 {"hata": "geçersiz proje verisi"}
@@ -143,21 +145,21 @@ Geçersiz bir istek `400` döner:
 
 ---
 
-## Güvenlik
+## Security
 
-| Tehdit | Önlem |
+| Threat | Mitigation |
 |---|---|
-| SQL enjeksiyonu | Tüm sorgular parametreli (`?`) |
-| XSS (kayıtlı veriden script çalıştırma) | Veriden gelen her değer HTML'e basılmadan önce kaçırılır (`escAttr`). Satır içi olay işleyicilerine kullanıcı verisi değil, sadece sayısal index yazılır |
-| Bozuk / kötü niyetli veri | Sunucu şema doğrulaması: `id` biçimi (`job_<zaman>_<rastgele>`), alan tipleri, metin uzunluğu, iç içe derinlik, `__proto__` gibi prototip anahtarları reddedilir |
-| Büyük istekle servisi yorma | İstek boyutu 1 MB ile sınırlı (`413`) |
-| CSRF (başka sitenin API'yi çağırması) | `Sec-Fetch-Site` başlığı kontrol edilir, yalnızca JSON kabul edilir |
-| DNS rebinding | Sadece `localhost` / `127.0.0.1` Host başlığı kabul edilir (`TRUSTED_HOSTS`) |
-| Clickjacking, dış kaynağa veri sızdırma | `Content-Security-Policy` (`frame-ancestors 'none'`, `connect-src 'self'`), `X-Frame-Options`, `nosniff`, `no-referrer` |
-| CDN'deki kütüphanenin değiştirilmesi | Harici scriptlerde Subresource Integrity (`integrity` hash) |
-| Debug konsolundan kod çalıştırma | Debug modu varsayılan kapalı, sadece `ENCORE_DEBUG=1` ile açılır. Sunucu yalnızca `127.0.0.1`'i dinler |
+| SQL injection | All queries are parameterized (`?`) |
+| XSS (script execution from stored data) | Every value coming from data is escaped before being written to HTML (`escAttr`). Inline event handlers only receive numeric indexes, never user data |
+| Malformed / malicious data | Server-side schema validation: `id` format (`job_<timestamp>_<random>`), field types, string length, nesting depth; prototype keys such as `__proto__` are rejected |
+| Overloading the service with large requests | Request size limited to 1 MB (`413`) |
+| CSRF (another site calling the API) | `Sec-Fetch-Site` header is checked; only JSON is accepted |
+| DNS rebinding | Only `localhost` / `127.0.0.1` Host headers are accepted (`TRUSTED_HOSTS`) |
+| Clickjacking, data exfiltration | `Content-Security-Policy` (`frame-ancestors 'none'`, `connect-src 'self'`), `X-Frame-Options`, `nosniff`, `no-referrer` |
+| Tampered CDN libraries | Subresource Integrity (`integrity` hash) on external scripts |
+| Code execution through the debug console | Debug mode is off by default and only enabled with `ENCORE_DEBUG=1`. The server only listens on `127.0.0.1` |
 
-Testleri çalıştırmak için (gerçek veritabanına dokunmaz):
+To run the tests (they do not touch the real database):
 
 ```bash
 python test_app.py
@@ -165,9 +167,9 @@ python test_app.py
 
 ---
 
-## Kurulum ve Çalıştırma
+## Installation & Running
 
-Gereksinim: **Python 3.9+**
+Requirement: **Python 3.9+**
 
 ```bash
 git clone https://github.com/Bovery-Max/Encore.git
@@ -183,51 +185,51 @@ pip install -r requirements.txt
 python app.py
 ```
 
-Ardından tarayıcıda **http://localhost:5001** adresini açın. `encore.db` dosyası ilk çalıştırmada proje klasöründe otomatik oluşturulur.
+Then open **http://localhost:5001** in your browser. The `encore.db` file is created automatically in the project folder on first run.
 
-> Excel kütüphaneleri ve yazı tipleri CDN'den yüklendiği için internet bağlantısı gerekir.
+> An internet connection is required because the Excel libraries and fonts are loaded from a CDN.
 
 ---
 
-## Proje Yapısı
+## Project Structure
 
 ```
 Encore/
-├── app.py                  # Flask uygulaması, SQLite bağlantısı ve REST API
-├── test_app.py             # API ve güvenlik testleri
-├── requirements.txt        # Python bağımlılıkları
+├── app.py                  # Flask app, SQLite connection and REST API
+├── test_app.py             # API and security tests
+├── requirements.txt        # Python dependencies
 ├── static/
-│   ├── index.html          # Tek sayfalık arayüz (iki mod)
-│   ├── css/style.css       # Tüm stiller (koyu tema)
+│   ├── index.html          # Single-page interface (both modes)
+│   ├── css/style.css       # All styles (dark theme)
 │   └── js/
-│       ├── simple-mode.js    # Basit hesaplama akışı ve Excel çıktısı
-│       ├── advanced-mode.js  # Gelişmiş mod: durum, hesaplamalar, sekmeler, API çağrıları
-│       ├── excel-export.js   # Bütçe teklifi formatında Excel çıktısı
-│       └── shader-bg.js      # Basit mod arka plan animasyonu (WebGL)
-└── docs/screenshots/       # README görselleri
+│       ├── simple-mode.js    # Simple calculation flow and Excel export
+│       ├── advanced-mode.js  # Advanced mode: state, calculations, tabs, API calls
+│       ├── excel-export.js   # Budget-proposal Excel export
+│       └── shader-bg.js      # Simple mode background animation (WebGL)
+└── docs/screenshots/       # README images
 ```
 
 ---
 
-## Hesaplama Mantığı
+## Calculation Logic
 
-| Değer | Formül |
+| Value | Formula |
 |---|---|
-| Personel gideri | Σ (brüt + yemek + yol + diğer yan hak) × kişi × ay, SGK dahilse + brüt toplamın %20,5'i |
-| Sabit gider | Aylık sabit gider toplamı × proje süresi (ay) |
-| Prodüksiyon gideri | Σ adet × gün × birim fiyat |
-| **Toplam maliyet** | Personel + Sabit + Prodüksiyon |
-| Net bilet fiyatı | Brüt fiyat − Σ (brüt fiyat × işaretli kesinti oranı) |
-| Bilet geliri | Σ çalışma günü × seans/gün × kapasite × doluluk % × net bilet fiyatı |
-| **Proje bedeli** | Bilet geliri + diğer gelirler (veya elle girilen tutar) |
-| **Kâr** | Proje bedeli − Toplam maliyet |
-| **Kâr marjı** | Kâr / Proje bedeli × 100 |
-| **Geri ödeme süresi** | Yatırım tutarı / (Kâr / proje süresi) |
+| Personnel cost | Σ (gross salary + meal + transport + other benefits) × people × months, plus 20.5% of total gross salary if SGK is included |
+| Fixed cost | Total monthly fixed costs × project duration (months) |
+| Production cost | Σ quantity × days × unit price |
+| **Total cost** | Personnel + Fixed + Production |
+| Net ticket price | Gross price − Σ (gross price × selected deduction rate) |
+| Ticket revenue | Σ working days × sessions/day × capacity × occupancy % × net ticket price |
+| **Project value** | Ticket revenue + other revenue (or a manually entered amount) |
+| **Profit** | Project value − Total cost |
+| **Profit margin** | Profit / Project value × 100 |
+| **Payback period** | Investment amount / (Profit / project duration) |
 
-Proje süresi, başlangıç ve bitiş tarihleri arasındaki gün sayısının 30,44'e bölünmesiyle ay cinsinden bulunur.
+Project duration in months is the number of days between the start and end dates divided by 30.44.
 
 ---
 
-## Geliştirici
+## Developer
 
-**[Bovery-Max](https://github.com/Bovery-Max)**: Veritabanı Sistemleri dersi projesi
+**[Bovery-Max](https://github.com/Bovery-Max)**: Database Systems course project
