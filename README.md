@@ -18,6 +18,7 @@ Uygulamanın iki modu var:
 - [Kullanılan Teknolojiler](#kullanılan-teknolojiler)
 - [Veritabanı Tasarımı](#veritabanı-tasarımı)
 - [REST API](#rest-api)
+- [Güvenlik](#güvenlik)
 - [Kurulum ve Çalıştırma](#kurulum-ve-çalıştırma)
 - [Proje Yapısı](#proje-yapısı)
 - [Hesaplama Mantığı](#hesaplama-mantığı)
@@ -134,10 +135,32 @@ curl -X POST http://localhost:5001/api/projeler \
 {"durum": "kaydedildi"}
 ```
 
-`id` alanı olmayan bir istek `400` döner:
+Geçersiz bir istek `400` döner:
 
 ```json
-{"hata": "proje id'si gerekli"}
+{"hata": "geçersiz proje verisi"}
+```
+
+---
+
+## Güvenlik
+
+| Tehdit | Önlem |
+|---|---|
+| SQL enjeksiyonu | Tüm sorgular parametreli (`?`) |
+| XSS (kayıtlı veriden script çalıştırma) | Veriden gelen her değer HTML'e basılmadan önce kaçırılır (`escAttr`). Satır içi olay işleyicilerine kullanıcı verisi değil, sadece sayısal index yazılır |
+| Bozuk / kötü niyetli veri | Sunucu şema doğrulaması: `id` biçimi (`job_<zaman>_<rastgele>`), alan tipleri, metin uzunluğu, iç içe derinlik, `__proto__` gibi prototip anahtarları reddedilir |
+| Büyük istekle servisi yorma | İstek boyutu 1 MB ile sınırlı (`413`) |
+| CSRF (başka sitenin API'yi çağırması) | `Sec-Fetch-Site` başlığı kontrol edilir, yalnızca JSON kabul edilir |
+| DNS rebinding | Sadece `localhost` / `127.0.0.1` Host başlığı kabul edilir (`TRUSTED_HOSTS`) |
+| Clickjacking, dış kaynağa veri sızdırma | `Content-Security-Policy` (`frame-ancestors 'none'`, `connect-src 'self'`), `X-Frame-Options`, `nosniff`, `no-referrer` |
+| CDN'deki kütüphanenin değiştirilmesi | Harici scriptlerde Subresource Integrity (`integrity` hash) |
+| Debug konsolundan kod çalıştırma | Debug modu varsayılan kapalı, sadece `ENCORE_DEBUG=1` ile açılır. Sunucu yalnızca `127.0.0.1`'i dinler |
+
+Testleri çalıştırmak için (gerçek veritabanına dokunmaz):
+
+```bash
+python test_app.py
 ```
 
 ---
@@ -171,6 +194,7 @@ Ardından tarayıcıda **http://localhost:5001** adresini açın. `encore.db` do
 ```
 Encore/
 ├── app.py                  # Flask uygulaması, SQLite bağlantısı ve REST API
+├── test_app.py             # API ve güvenlik testleri
 ├── requirements.txt        # Python bağımlılıkları
 ├── static/
 │   ├── index.html          # Tek sayfalık arayüz (iki mod)

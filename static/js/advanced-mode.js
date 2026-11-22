@@ -104,12 +104,12 @@ function renderSidebar(){
   list.innerHTML = jobs.map(j=>{
     const d = new Date(j.createdAt || Date.now());
     const ds = d.toLocaleDateString('tr-TR');
-    return `<div class="job-item ${state && j.id===state.id?'active':''}" onclick="loadJob('${j.id}')" style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
+    return `<div class="job-item ${state && j.id===state.id?'active':''}" data-id="${escAttr(j.id)}" onclick="loadJob(this.dataset.id)" style="display:flex; align-items:center; justify-content:space-between; gap:6px;">
       <div style="min-width:0;">
         <div class="jn">${escAttr(j.name) || 'İsimsiz proje'}</div>
         <div class="jd">${ds}</div>
       </div>
-      <button class="icon-btn" style="flex-shrink:0;" onclick="deleteJob('${j.id}', event)">✕</button>
+      <button class="icon-btn" style="flex-shrink:0;" onclick="deleteJob(this.closest('.job-item').dataset.id, event)">✕</button>
     </div>`;
   }).join('');
 }
@@ -296,14 +296,17 @@ const prodSatirTutar = r => (+r.adet||0)*(+r.gun||0)*(+r.fiyat||0)*kurFor(r.pb);
 function prodKategoriToplam(cat){
   return state.production[cat].reduce((s,r)=> s + prodSatirTutar(r), 0);
 }
+/* Veriden gelen kategori adları nesne anahtarı olur; __proto__ vb. prototipi bozar. */
+const guvenliKategoriler = o => Object.keys(o||{}).filter(k => !['__proto__','constructor','prototype'].includes(k) && Array.isArray(o[k]));
 function prodKategoriler(){
   if(!state.production || typeof state.production !== 'object') return [];
   if(state.production.notlar !== undefined){
     if(!state.notlar) state.notlar = state.production.notlar;
     delete state.production.notlar;
   }
-  return Object.keys(state.production).filter(k => Array.isArray(state.production[k]));
+  return guvenliKategoriler(state.production);
 }
+const P = ci => state.production[prodKategoriler()[ci]];
 function prodToplam(){
   return prodKategoriler().reduce((s,c)=>s+prodKategoriToplam(c),0);
 }
@@ -354,9 +357,6 @@ const fmt = n => {
 
 
 const fmtPct = n => (isFinite(n)?n:0).toLocaleString('tr-TR',{maximumFractionDigits:1}) + ' %';
-/* Prevents a stray " or < in a typed value from corrupting the generated HTML
-   (which previously could break later elements, including the tab bar). */
-const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/</g,'&lt;');
 /* Her panelin en üstünde: "buradaki değişiklik hangi sekmeyi/sonucu etkiliyor" ipucu. */
 const depHint = (html, color) => `<div class="dep-hint c-${color||'red'}">🔗 ${html}</div>`;
 /* Bir cümle içinde başka bir sekmenin adı geçtiğinde, kutunun kendi rengi ne olursa
@@ -531,7 +531,7 @@ function pullItemsFromCategory(kategori, kind){
     matching.forEach(j=>pullInto(state.fixedCosts, 'kalem', j.fixedCosts, have));
   } else if(kind === 'prod'){
     matching.forEach(j=>{
-      Object.keys(j.production||{}).forEach(cat=>{
+      guvenliKategoriler(j.production).forEach(cat=>{
         if(!state.production[cat]) state.production[cat] = [];
         const have = nameSet(state.production[cat], 'kalem');
         pullInto(state.production[cat], 'kalem', j.production[cat], have);
@@ -571,7 +571,7 @@ function autoFillFromTemplate(kategori){
     total++;
   });
 
-  Object.keys(templateLibrary.prod||{}).forEach(cat=>{
+  guvenliKategoriler(templateLibrary.prod).forEach(cat=>{
     if(!state.production[cat]) state.production[cat] = [];
     const have3 = nameSet(state.production[cat], 'kalem');
     (templateLibrary.prod[cat]||[]).filter(uygun).forEach(it=>{
@@ -603,7 +603,7 @@ function syncAllProjectItemsToLibrary(){
   jobs.forEach(job=>{
     (job.personnel||[]).forEach(r=>addIfNew('personel', r.unvan));
     (job.fixedCosts||[]).forEach(r=>addIfNew('sabit', r.kalem));
-    Object.keys(job.production||{}).forEach(cat=>{
+    guvenliKategoriler(job.production).forEach(cat=>{
       if(!templateLibrary.prod[cat]) templateLibrary.prod[cat] = [];
       (job.production[cat]||[]).forEach(r=>addIfNew('prod:'+cat, r.kalem));
     });
@@ -760,12 +760,12 @@ function panelPersonel(){
     <tr style="${r.dahil===false?'opacity:.45;':''}">
       <td style="text-align:center;"><input data-key="${K()}" type="checkbox" ${r.dahil===false?'':'checked'} title="Toplama dahil et" onchange="state.personnel[${i}].dahil=this.checked; calc();"></td>
       <td><input data-key="${K()}" value="${escAttr(r.unvan)}" placeholder="Ünvan" list="dlPersonel" oninput="state.personnel[${i}].unvan=this.value; if(applyTemplateAutofill('personel',this.value,state.personnel[${i}],'brut')) calc(); else autosave();">${!isKnownTemplateName('personel', r.unvan) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('personel', state.personnel[${i}].unvan)">＋ şablona ekle</button>` : ''}</td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.brut}" oninput="state.personnel[${i}].brut   =this.value; calc();">${templateMismatchWarning('personel', r.unvan, r.brut)}</td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.yemek}" oninput="state.personnel[${i}].yemek   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.yol}" oninput="state.personnel[${i}].yol   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.digerYanHak}" oninput="state.personnel[${i}].digerYanHak   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.kisi}" style="width:60px" oninput="state.personnel[${i}].kisi   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.ay}" style="width:60px" oninput="state.personnel[${i}].ay   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.brut)}" oninput="state.personnel[${i}].brut   =this.value; calc();">${templateMismatchWarning('personel', r.unvan, r.brut)}</td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.yemek)}" oninput="state.personnel[${i}].yemek   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.yol)}" oninput="state.personnel[${i}].yol   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.digerYanHak)}" oninput="state.personnel[${i}].digerYanHak   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.kisi)}" style="width:60px" oninput="state.personnel[${i}].kisi   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.ay)}" style="width:60px" oninput="state.personnel[${i}].ay   =this.value; calc();"></td>
       <td class="num">${fmt(((+r.brut||0)+(+r.yemek||0)+(+r.yol||0)+(+r.digerYanHak||0))*(+r.kisi||0)*(+r.ay||0))}</td>
       <td style="min-width:160px;"><input data-key="${K()}" value="${escAttr(r.not||'')}" placeholder="Not..." oninput="state.personnel[${i}].not=this.value; autosave();"></td>
       <td class="col-del"><button class="icon-btn" onclick="state.personnel.splice(${i},1); calc();">✕</button></td>
@@ -800,7 +800,7 @@ function panelSabit(){
       <input data-key="${K()}" class="sc-name" value="${escAttr(r.kalem)}" placeholder="Gider kalemi" list="dlSabit" oninput="state.fixedCosts[${i}].kalem=this.value; if(applyTemplateAutofill('sabit',this.value,state.fixedCosts[${i}],'tutar')) calc(); else autosave();">
       ${!isKnownTemplateName('sabit', r.kalem) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('sabit', state.fixedCosts[${i}].kalem)">＋ şablona ekle</button>` : ''}
       <div class="sc-amount-row">
-        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.tutar}" oninput="state.fixedCosts[${i}].tutar=this.value; calc();">
+        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.tutar)}" oninput="state.fixedCosts[${i}].tutar=this.value; calc();">
         <span>TL/ay</span>
       </div>
       <div class="sc-note-row">
@@ -831,22 +831,22 @@ function panelProd(){
     const kalemPlaceholder = suggestions.length ? `örn. ${suggestions[0]}` : 'Kalem';
     const rows = state.production[cat].map((r,i)=>`
       <tr>
-        <td><input data-key="${K()}" value="${escAttr(r.kalem)}" placeholder="${escAttr(kalemPlaceholder)}" list="${dlId}" oninput="state.production['${cat}'][${i}].kalem=this.value; if(applyTemplateAutofill('prod:${cat}',this.value,state.production['${cat}'][${i}],'fiyat')) calc(); else autosave();">${!isKnownTemplateName('prod:'+cat, r.kalem) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('prod:${cat}', state.production['${cat}'][${i}].kalem)">＋ şablona ekle</button>` : ''}</td>
-        <td style="width:70px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.adet}" oninput="state.production['${cat}'][${i}].adet   =this.value; calc();"></td>
-        <td style="width:70px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.gun}" oninput="state.production['${cat}'][${i}].gun   =this.value; calc();"></td>
-        <td style="width:110px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.fiyat}" oninput="state.production['${cat}'][${i}].fiyat   =this.value; calc();"></td>
-        <td style="min-width:160px;"><input data-key="${K()}" value="${escAttr(r.kalemNot||'')}" placeholder="Not..." oninput="state.production['${cat}'][${i}].kalemNot=this.value; autosave();"></td>
+        <td><input data-key="${K()}" value="${escAttr(r.kalem)}" placeholder="${escAttr(kalemPlaceholder)}" list="${dlId}" oninput="P(${ci})[${i}].kalem=this.value; if(applyTemplateAutofill('prod:'+prodKategoriler()[${ci}],this.value,P(${ci})[${i}],'fiyat')) calc(); else autosave();">${!isKnownTemplateName('prod:'+cat, r.kalem) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('prod:'+prodKategoriler()[${ci}], P(${ci})[${i}].kalem)">＋ şablona ekle</button>` : ''}</td>
+        <td style="width:70px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.adet)}" oninput="P(${ci})[${i}].adet   =this.value; calc();"></td>
+        <td style="width:70px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.gun)}" oninput="P(${ci})[${i}].gun   =this.value; calc();"></td>
+        <td style="width:110px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.fiyat)}" oninput="P(${ci})[${i}].fiyat   =this.value; calc();"></td>
+        <td style="min-width:160px;"><input data-key="${K()}" value="${escAttr(r.kalemNot||'')}" placeholder="Not..." oninput="P(${ci})[${i}].kalemNot=this.value; autosave();"></td>
         <td class="num">${fmt(prodSatirTutar(r))}</td>
-        <td class="col-del"><button class="icon-btn" onclick="state.production['${cat}'].splice(${i},1); calc();">✕</button></td>
+        <td class="col-del"><button class="icon-btn" onclick="P(${ci}).splice(${i},1); calc();">✕</button></td>
       </tr>`).join('');
     return `
       <div class="prod-group">
-        <h4>${cat} <span class="sub">${fmt(prodKategoriToplam(cat))}</span></h4>
+        <h4>${escAttr(cat)} <span class="sub">${fmt(prodKategoriToplam(cat))}</span></h4>
         <div class="table-scroll"><table>
          <thead><tr><th style="min-width:220px">Kalem</th><th>Adet</th><th>Gün</th><th>Birim Fiyat (TL)</th><th>Not</th><th style="text-align:right">Toplam (TL)</th><th></th></tr></thead>
           <tbody>${rows}</tbody>
         </table></div>
-        <button class="add-row-btn" onclick="state.production['${cat}'].push({kalem:'',adet:1,gun:1,fiyat:0}); calc();">＋ kalem ekle</button>
+        <button class="add-row-btn" onclick="P(${ci}).push({kalem:'',adet:1,gun:1,fiyat:0}); calc();">＋ kalem ekle</button>
         ${datalistHtml(dlId, suggestions)}
       </div>`;
   }).join('');
@@ -855,8 +855,8 @@ function panelProd(){
     ${depHint(`Bu sekmedeki toplam, ${refTab('Özet P&L')} sekmesindeki Toplam Maliyet'e eklenir.`, 'purple')}
     ${pullFromProjectControlHtml('prod','pullSrcProd')}
     <div style="display:flex; gap:16px; margin-bottom:18px; margin-top:12px;">
-      <div class="field"><label>USD/TL Kuru</label><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:110px" value="${state.kurUSD}" oninput="state.kurUSD   =this.value; calc();"></div>
-      <div class="field"><label>EUR/TL Kuru</label><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:110px" value="${state.kurEUR}" oninput="state.kurEUR   =this.value; calc();"></div>
+      <div class="field"><label>USD/TL Kuru</label><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:110px" value="${escAttr(state.kurUSD)}" oninput="state.kurUSD   =this.value; calc();"></div>
+      <div class="field"><label>EUR/TL Kuru</label><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:110px" value="${escAttr(state.kurEUR)}" oninput="state.kurEUR   =this.value; calc();"></div>
     </div>
     ${groups}
     <div class="section-title"><h3 style="color:var(--text)">TOPLAM PRODÜKSİYON GİDERİ: <span style="color:var(--gold-bright)">${fmt(prodToplam())}</span></h3></div>`;
@@ -871,7 +871,7 @@ function panelBilet(){
         <input data-key="${K()}" value="${escAttr(k.ad)}" placeholder="örn. KDV" list="dlKesinti" oninput="state.kesintiler[${i}].ad=this.value; if(applyTemplateAutofill('kesinti',this.value,state.kesintiler[${i}],'oran')) calc(); else autosave();">
         ${!isKnownTemplateName('kesinti', k.ad) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('kesinti', state.kesintiler[${i}].ad)">＋ şablona ekle</button>` : ''}
       </div>
-      <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${k.oran}" oninput="state.kesintiler[${i}].oran   =this.value; calc();">
+      <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(k.oran)}" oninput="state.kesintiler[${i}].oran   =this.value; calc();">
       <div class="kv">%${(+k.oran||0).toLocaleString('tr-TR')}</div>
       <button class="icon-btn" onclick="state.kesintiler.splice(${i},1); calc();">✕</button>
     </div>`).join('');
@@ -880,7 +880,7 @@ function panelBilet(){
     ${depHint(`Buradaki <b>net bilet fiyatı</b>, ${refTab('Gelir Projeksiyonu')} sekmesindeki bilet gelirini belirler.`, 'orange')}
     <div class="field" style="margin-bottom:18px;">
       <label>Brüt Bilet Fiyatı (TL)</label>
-      <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:160px" value="${state.biletFiyati}" oninput="state.biletFiyati   =this.value; calc();">
+      <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" style="width:160px" value="${escAttr(state.biletFiyati)}" oninput="state.biletFiyati   =this.value; calc();">
     </div>
     <p class="hint">İşaretli kesintiler brüt fiyattan düşülerek net bilet fiyatı hesaplanır. Kullanmadığın kesintinin kutusunu boş bırak.</p>
     ${rows}
@@ -899,10 +899,10 @@ function panelGelir(){
     const satilan = (+r.calismaGunu||0)*(+r.seansGun||0)*(+r.kapasiteSeans||0)*((+r.doluluk||0)/100);
     return `<tr>
       <td><input data-key="${K()}" value="${escAttr(r.ay)}" style="width:80px" oninput="state.gelirAylar[${i}].ay=this.value; autosave();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.calismaGunu}" style="width:70px" oninput="state.gelirAylar[${i}].calismaGunu   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.seansGun}" style="width:70px" oninput="state.gelirAylar[${i}].seansGun   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.kapasiteSeans}" style="width:80px" oninput="state.gelirAylar[${i}].kapasiteSeans   =this.value; calc();"></td>
-      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.doluluk}" style="width:70px" oninput="state.gelirAylar[${i}].doluluk   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.calismaGunu)}" style="width:70px" oninput="state.gelirAylar[${i}].calismaGunu   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.seansGun)}" style="width:70px" oninput="state.gelirAylar[${i}].seansGun   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.kapasiteSeans)}" style="width:80px" oninput="state.gelirAylar[${i}].kapasiteSeans   =this.value; calc();"></td>
+      <td><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.doluluk)}" style="width:70px" oninput="state.gelirAylar[${i}].doluluk   =this.value; calc();"></td>
       <td class="num">${Math.round(satilan)}</td>
       <td class="num" style="color:var(--text-faint);" title="Bilet & Kesintiler sekmesinden gelir, burada değiştirilemez">${fmt(netBiletFiyati())} 🔒</td>
       <td class="num">${fmt(satilan*netBiletFiyati())}</td>
@@ -912,7 +912,7 @@ function panelGelir(){
   const digerRows = state.digerGelirler.map((r,i)=>`
     <tr>
       <td><input data-key="${K()}" value="${escAttr(r.ad)}" list="dlDigerGelir" oninput="state.digerGelirler[${i}].ad=this.value; if(applyTemplateAutofill('digerGelir',this.value,state.digerGelirler[${i}],'tutar')) calc(); else autosave();">${!isKnownTemplateName('digerGelir', r.ad) ? `<button type="button" class="tpl-add-hint" onclick="addTemplateItem('digerGelir', state.digerGelirler[${i}].ad)">＋ şablona ekle</button>` : ''}</td>
-      <td style="width:160px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${r.tutar}" oninput="state.digerGelirler[${i}].tutar   =this.value; calc();"></td>
+      <td style="width:160px"><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(r.tutar)}" oninput="state.digerGelirler[${i}].tutar   =this.value; calc();"></td>
       <td class="col-del"><button class="icon-btn" onclick="state.digerGelirler.splice(${i},1); calc();">✕</button></td>
     </tr>`).join('');
   return `
@@ -949,12 +949,12 @@ function panelSonuc(){
       <div class="stat-card"><div class="label">Toplam Maliyet</div><div class="value">${fmt(toplamMaliyet())}</div></div>
       <div class="stat-card editable">
         <div class="label">Proje Bedeli ${state.projeBedeliManuel!==null && state.projeBedeliManuel!=='' ? '(elle girildi)' : '(gelir projeksiyonundan)'}</div>
-        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" placeholder="otomatik: ${Math.round(gelirToplam())}" value="${state.projeBedeliManuel===null?'':state.projeBedeliManuel}"
+        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" placeholder="otomatik: ${Math.round(gelirToplam())}" value="${escAttr(state.projeBedeliManuel===null?'':state.projeBedeliManuel)}"
           oninput="state.projeBedeliManuel = this.value===''?null:+this.value; calc();">
       </div>
       <div class="stat-card editable">
         <div class="label">Hedef Kazancınız</div>
-        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${state.hedefKazanc}" oninput="state.hedefKazanc   =this.value; autosave();">
+        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(state.hedefKazanc)}" oninput="state.hedefKazanc   =this.value; autosave();">
       </div>
     </div>
 
@@ -963,12 +963,12 @@ function panelSonuc(){
       <div class="stat-card"><div class="label">Kâr Marjı</div><div class="value">${fmtPct(karMarji())}</div></div>
       <div class="stat-card editable">
         <div class="label">Minimum Kâr Marjı Eşiği</div>
-        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${state.minMarj}" oninput="state.minMarj   =this.value; calc();">
+        <input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(state.minMarj)}" oninput="state.minMarj   =this.value; calc();">
       </div>
     </div>
 
     <div class="result-grid" style="margin-top:14px;">
-      <div class="stat-card editable"><div class="label">Yatırım Tutarı (opsiyonel)</div><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${state.yatirimTutari}" oninput="state.yatirimTutari   =this.value; calc();"></div>
+      <div class="stat-card editable"><div class="label">Yatırım Tutarı (opsiyonel)</div><input data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(state.yatirimTutari)}" oninput="state.yatirimTutari   =this.value; calc();"></div>
             <div class="stat-card"><div class="label">Aylık Net Kâr</div><div class="value">${fmt(kar()/(sureAy()||1))}</div></div>
       <div class="stat-card"><div class="label">Geri Ödeme Süresi</div><div class="value">${fmtAySure(geri)}</div></div>
     </div>
@@ -976,7 +976,7 @@ function panelSonuc(){
     <div class="verdict ${ok?'ok':'no'}">
       <div class="vtext">
         <h2>${ok?'✅ KÂRDASINIZ':'❌ KÂRDA DEĞİLSİNİZ'}</h2>
-        <p>Kâr marjınız %${state.minMarj} eşiğine göre ${ok?'sağlanıyor':'sağlanamıyor'}. (Kâr marjı = Kâr / Proje Bedeli)</p>
+        <p>Kâr marjınız %${escAttr(state.minMarj)} eşiğine göre ${ok?'sağlanıyor':'sağlanamıyor'}. (Kâr marjı = Kâr / Proje Bedeli)</p>
       </div>
       <div class="vnum">%${(isFinite(karMarji())?karMarji():0).toFixed(1)}</div>
     </div>
@@ -995,27 +995,29 @@ function panelSonuc(){
 /* ---------- Ayarlar (Şablon Kütüphanesi) ---------- */
 let ayarlarOpen = {};
 let ayarlarDraft = {};
+/* Inline handler'lara isim değil index yazılır; isim veriden geldiği için JS'e enjekte edilemez. */
+const GP = gi => ayarlarGroupList()[gi].path;
 function ayarlarGroupList(){
   return [
     {path:'personel', title:'Personel Unvanları', unit:'currency', priceLabel:'Brüt Maaş'},
     {path:'sabit', title:'Sabit Gider Kalemleri', unit:'currency', priceLabel:'Aylık Tutar'},
-    ...Object.keys(templateLibrary.prod).map(cat => ({path:'prod:'+cat, title:'Prodüksiyon — '+cat, unit:'currency', priceLabel:'Birim Fiyat'})),
+    ...guvenliKategoriler(templateLibrary.prod).map(cat => ({path:'prod:'+cat, title:'Prodüksiyon — '+cat, unit:'currency', priceLabel:'Birim Fiyat'})),
     {path:'kesinti', title:'Kesinti Kalemleri', unit:'%', priceLabel:'Oran'},
     {path:'digerGelir', title:'Diğer Gelir Kalemleri', unit:'currency', priceLabel:'Tutar'}
   ];
 }
 function panelAyarlar(){
-  const groups = ayarlarGroupList().map(g => {
+  const groups = ayarlarGroupList().map((g, gi) => {
     const items = resolveTemplateGroup(g.path) || [];
     const isOpen = ayarlarOpen[g.path] !== false;
     const rows = items.map((it,i) => `
       <div class="ayarlar-item${it.enabled?'':' off'}">
         <label class="ayarlar-check">
-          <input data-key="${K()}" type="checkbox" ${it.enabled?'checked':''} onchange="toggleTemplateItem('${g.path}', ${i})">
+          <input data-key="${K()}" type="checkbox" ${it.enabled?'checked':''} onchange="toggleTemplateItem(GP(${gi}), ${i})">
           <span>${escAttr(it.name)}</span>
         </label>
         <div class="ayarlar-price" title="Fiyatı/para birimini ayarlayıp Kaydet'e bas — otomatik kaydolmaz.">
-          <input id="tplPrice_${safeId(g.path)}_${i}" data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${it.price||0}">
+          <input id="tplPrice_${safeId(g.path)}_${i}" data-key="${K()}" type="text" inputmode="decimal" autocomplete="off" onfocus="this.select()" value="${escAttr(it.price||0)}">
           ${g.unit === '%' ? `<span>%</span>` : `
           <select id="tplCur_${safeId(g.path)}_${i}" data-key="${K()}">
             <option value="TL" ${it.currency==='TL'||!it.currency?'selected':''}>TL</option>
@@ -1027,15 +1029,15 @@ function panelAyarlar(){
           <option value="Tümü" ${!it.kategori||it.kategori==='Tümü'?'selected':''}>Tümü</option>
           ${PROJE_KATEGORILERI.map(c=>`<option value="${escAttr(c)}" ${it.kategori===c?'selected':''}>${escAttr(c)}</option>`).join('')}
         </select>
-                <button class="icon-btn tpl-save-btn" title="Kaydet" onclick="saveTemplateItemRow('${g.path}', ${i}, this)">✓</button>
+                <button class="icon-btn tpl-save-btn" title="Kaydet" onclick="saveTemplateItemRow(GP(${gi}), ${i}, this)">✓</button>
         <button class="icon-btn" title="İptal — değişikliği atar" onclick="renderPanels()">↺</button>
-        <button class="icon-btn" title="Kalıcı olarak sil" onclick="deleteTemplateItem('${g.path}', ${i})">✕</button>
+        <button class="icon-btn" title="Kalıcı olarak sil" onclick="deleteTemplateItem(GP(${gi}), ${i})">✕</button>
       </div>`).join('');
     return `
       <div class="ayarlar-group">
-        <div class="ayarlar-group-head" onclick="ayarlarOpen['${g.path}']=${isOpen}?false:true; renderPanels();">
+        <div class="ayarlar-group-head" onclick="ayarlarOpen[GP(${gi})]=${isOpen}?false:true; renderPanels();">
           <span class="ayarlar-caret">${isOpen?'▾':'▸'}</span>
-          <h4>${g.title}</h4>
+          <h4>${escAttr(g.title)}</h4>
           <span class="sub">${items.filter(x=>x.enabled).length}/${items.length} aktif</span>
         </div>
         ${isOpen ? `
@@ -1043,11 +1045,11 @@ function panelAyarlar(){
           ${rows || '<p class="hint" style="margin:8px 0 0;">Henüz kalem yok.</p>'}
           <div class="ayarlar-add">
             <input data-key="${K()}" type="text" placeholder="+ yeni kalem adı..." value="${escAttr(ayarlarDraft[g.path]||'')}"
-              oninput="ayarlarDraft['${g.path}']=this.value;"
-              onkeydown="if(event.key==='Enter'){ addTemplateItem('${g.path}', this.value); ayarlarDraft['${g.path}']=''; }">
-            <button onclick="const inp=this.previousElementSibling; addTemplateItem('${g.path}', inp.value); ayarlarDraft['${g.path}']='';">Ekle</button>
+              oninput="ayarlarDraft[GP(${gi})]=this.value;"
+              onkeydown="if(event.key==='Enter'){ addTemplateItem(GP(${gi}), this.value); ayarlarDraft[GP(${gi})]=''; }">
+            <button onclick="const inp=this.previousElementSibling; addTemplateItem(GP(${gi}), inp.value); ayarlarDraft[GP(${gi})]='';">Ekle</button>
           </div>
-          <button class="ayarlar-reset" onclick="resetTemplateGroup('${g.path}')">↺ Varsayılanlara Dön</button>
+          <button class="ayarlar-reset" onclick="resetTemplateGroup(GP(${gi}))">↺ Varsayılanlara Dön</button>
         </div>` : ''}
       </div>`;
   }).join('');

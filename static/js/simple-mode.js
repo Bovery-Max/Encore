@@ -8,6 +8,10 @@ function setAppMode(mode){
   document.getElementById('msBtnAdvanced').classList.toggle('active', mode==='advanced');
 }
 
+/* Veriden gelen her metin HTML'e bununla basılır (iki mod da kullanır).
+   Tırnaklar dahil kaçırılır: hem metin hem attribute içinde güvenli. */
+const escAttr = s => String(s ?? '').replace(/&/g,'&amp;').replace(/"/g,'&quot;').replace(/'/g,'&#39;').replace(/</g,'&lt;').replace(/>/g,'&gt;');
+
 /* ============================================================
    BASİT MOD (Sahne Kârlılık Hesaplayıcı)
 ============================================================ */
@@ -201,7 +205,7 @@ function stepBodyHtml(s, isEditing){
     const inputAttr = isMoney ? `oninput="liveFormat(this,'${s.key}')"` : '';
     return `
         <input id="input-${s.key}" type="text" inputmode="decimal" autocomplete="off"
-          placeholder="${s.placeholder}" value="${displayVal}"
+          placeholder="${s.placeholder}" value="${escAttr(displayVal)}"
           onkeydown="if(event.key==='Enter'){advance();}" ${inputAttr} ${blurAttr}>
         <div class="step-hint">${isEditing ? 'Değişiklik yapıp Enter\'a bas ya da başka bir yere tıkla — otomatik kaydedilir.' : s.hint}</div>`;
   }
@@ -218,13 +222,13 @@ function stepBodyHtml(s, isEditing){
         </div>
         <input id="input-adet" type="text" inputmode="decimal" autocomplete="off"
           style="${mode==='formula'?'display:none;':''}"
-          placeholder="${s.placeholder}" value="${rawToDisplay(values.adet||'')}"
+          placeholder="${s.placeholder}" value="${escAttr(rawToDisplay(values.adet||''))}"
           onkeydown="if(event.key==='Enter'){advance();}" oninput="liveFormat(this,'adet')" ${blurAttr}>
         ${mode==='formula' ? `
         <div class="formula-grid">
-          <div><label class="mini-label">Gün</label><input id="input-adetGun" type="text" inputmode="decimal" autocomplete="off" placeholder="22" value="${rawToDisplay(values.adetGun||'')}" oninput="onFormulaInput(this,'adetGun')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
-          <div><label class="mini-label">Kişi Adedi</label><input id="input-adetKisi" type="text" inputmode="decimal" autocomplete="off" placeholder="40" value="${rawToDisplay(values.adetKisi||'')}" oninput="onFormulaInput(this,'adetKisi')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
-          <div><label class="mini-label">Seans</label><input id="input-adetSeans" type="text" inputmode="decimal" autocomplete="off" placeholder="3" value="${rawToDisplay(values.adetSeans||'')}" oninput="onFormulaInput(this,'adetSeans')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
+          <div><label class="mini-label">Gün</label><input id="input-adetGun" type="text" inputmode="decimal" autocomplete="off" placeholder="22" value="${escAttr(rawToDisplay(values.adetGun||''))}" oninput="onFormulaInput(this,'adetGun')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
+          <div><label class="mini-label">Kişi Adedi</label><input id="input-adetKisi" type="text" inputmode="decimal" autocomplete="off" placeholder="40" value="${escAttr(rawToDisplay(values.adetKisi||''))}" oninput="onFormulaInput(this,'adetKisi')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
+          <div><label class="mini-label">Seans</label><input id="input-adetSeans" type="text" inputmode="decimal" autocomplete="off" placeholder="3" value="${escAttr(rawToDisplay(values.adetSeans||''))}" oninput="onFormulaInput(this,'adetSeans')" onkeydown="if(event.key==='Enter'){advance();}" ${blurAttr}></div>
         </div>
         <div class="formula-result">= <span id="adetUrunGoster">${sFmt(urun)} adet</span></div>
         ` : ''}
@@ -249,7 +253,7 @@ function render(){
           <div class="step-num">${state==='done' ? '✓' : i+1}</div>
           <div class="step-label">${s.label}${s.optional?' <span style=\"font-weight:400;color:var(--text-faint);\">(opsiyonel)</span>':''}</div>
         </div>
-        ${state==='done' ? `<div class="step-value">${displayVal}</div>` : ''}
+        ${state==='done' ? `<div class="step-value">${escAttr(displayVal)}</div>` : ''}
       </div>
       <div class="step-body">
         ${stepBodyHtml(s, isEditing)}
