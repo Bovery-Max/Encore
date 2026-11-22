@@ -1,0 +1,136 @@
+<!DOCTYPE html>
+<html lang="tr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Encore — Kârlılık &amp; ROI Hesaplayıcı</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&family=JetBrains+Mono:wght@500;600;700&display=swap" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/xlsx/0.18.5/xlsx.full.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/jszip/3.10.1/jszip.min.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js"></script>
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body class="mode-simple">
+<div class="mode-switch">
+  <button type="button" class="hamburger-btn" id="hamburgerBtn" onclick="toggleMobileSidebar()" aria-label="Kayıtlı projeler menüsü">☰</button>
+  <div class="mode-switch-buttons">
+    <button type="button" class="ms-btn active" id="msBtnSimple" onclick="setAppMode('simple')">Basit Hesaplama</button>
+    <button type="button" class="ms-btn" id="msBtnAdvanced" onclick="setAppMode('advanced')">Gelişmiş Mod</button>
+  </div>
+</div>
+
+<div id="modeSimple" class="simple-mode-scope">
+<canvas id="shaderBg"></canvas>
+
+<div class="corner-mark">
+  <svg viewBox="0 0 900 900" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+    <path d="M425 250H475L640 740H260Z" opacity="0.28"/>
+    <path d="M260 742A190 26 0 1 0 640 742A190 26 0 1 0 260 742Z" opacity="0.55"/>
+    <path d="M120 130H780V205Q725 265 670 205Q615 265 560 205Q505 265 450 205Q395 265 340 205Q285 265 230 205Q175 265 120 205Z M130 245H405C392 380 305 480 228 538C290 600 305 690 305 770H130Z M770 245H495C508 380 595 480 672 538C610 600 595 690 595 770H770Z M200 262C206 370 192 455 168 515L182 521C208 458 222 370 216 262Z M700 262C694 370 708 455 732 515L718 521C692 458 678 370 684 262Z M110 790H790V830H110Z" fill-rule="evenodd"/>
+  </svg>
+</div>
+<div class="wrap">
+  <div class="header">
+    <h1>Sahne Kârlılık Hesaplayıcı</h1>
+    <p>5 soru, tek sonuç. Cevapladıkça bir alttaki açılır.</p>
+  </div>
+
+  <div id="steps"></div>
+  <div id="resultZone"></div>
+  <div class="restart">
+    <a onclick="restart()">↺ Sıfırla / Yeniden Başla</a>
+  </div>
+</div>
+
+</div>
+
+<div id="modeAdvanced">
+
+<div id="splash">
+  <div id="splash-mark">
+    <svg viewBox="0 0 900 900" fill="currentColor" xmlns="http://www.w3.org/2000/svg">
+      <path d="M425 250H475L640 740H260Z" opacity="0.28"/>
+      <path d="M260 742A190 26 0 1 0 640 742A190 26 0 1 0 260 742Z" opacity="0.55"/>
+      <path d="M120 130H780V205Q725 265 670 205Q615 265 560 205Q505 265 450 205Q395 265 340 205Q285 265 230 205Q175 265 120 205Z M130 245H405C392 380 305 480 228 538C290 600 305 690 305 770H130Z M770 245H495C508 380 595 480 672 538C610 600 595 690 595 770H770Z M200 262C206 370 192 455 168 515L182 521C208 458 222 370 216 262Z M700 262C694 370 708 455 732 515L718 521C692 458 678 370 684 262Z M110 790H790V830H110Z" fill-rule="evenodd"/>
+    </svg>
+  </div>
+  <div id="splash-word">ENCORE</div>
+</div>
+<div class="app">
+
+  <div class="sidebar-backdrop" id="sidebarBackdrop" onclick="closeMobileSidebar()"></div>
+
+  <!-- ================= SIDEBAR ================= -->
+  <div class="sidebar" id="sidebar">
+    <div class="brand">
+      <div class="brand-mark">
+        <svg viewBox="0 0 900 900" fill="currentColor" xmlns="http://www.w3.org/2000/svg" style="color:var(--gold-bright)">
+          <path d="M425 250H475L640 740H260Z" opacity="0.28"/>
+          <path d="M260 742A190 26 0 1 0 640 742A190 26 0 1 0 260 742Z" opacity="0.55"/>
+          <path d="M120 130H780V205Q725 265 670 205Q615 265 560 205Q505 265 450 205Q395 265 340 205Q285 265 230 205Q175 265 120 205Z M130 245H405C392 380 305 480 228 538C290 600 305 690 305 770H130Z M770 245H495C508 380 595 480 672 538C610 600 595 690 595 770H770Z M200 262C206 370 192 455 168 515L182 521C208 458 222 370 216 262Z M700 262C694 370 708 455 732 515L718 521C692 458 678 370 684 262Z M110 790H790V830H110Z" fill-rule="evenodd"/>
+        </svg>
+      </div>
+      <div class="brand-text">Encore<span>ROI Calculator</span></div>
+    </div>
+
+    <div class="sidebar-label">Kayıtlı Projeler</div>
+    <div class="job-list" id="jobList"></div>
+    <button class="new-job-btn" onclick="newJob()">＋ Yeni Proje</button>
+  </div>
+
+  <!-- ================= MAIN ================= -->
+  <div class="main">
+    <div class="header-sticky">
+    <div class="topbar">
+      <div class="field grow">
+        <label>Job Name <span class="req">*</span></label>
+        <input id="jobName" placeholder="örn. Orman Yürüyüşü 2026" oninput="state.name=this.value; renderSidebar(); autosave(); renderGate();">
+      </div>
+      <div class="field" style="min-width:170px;">
+        <label>Kategori</label>
+  <select id="jobKategori" onchange="state.kategori=this.value; autosave(); autoFillFromTemplate(this.value);">
+  <option>Etkinlik / Tur</option>
+  <option>Sahne Gösterisi</option>
+  <option>Kurumsal Aktivite</option>
+  <option>Festival</option>
+  <option>Diğer</option>
+</select>
+      </div>
+      <div class="field">
+        <label>Tarih <span class="req">*</span></label>
+        <input type="date" id="jobTarih" style="width:150px" oninput="state.tarih=this.value; autosave(); renderGate();">
+      </div>
+            <div class="field">
+        <label>Proje Başlangıç <span class="req">*</span></label>
+        <input type="date" id="projeBaslangic" style="width:150px" oninput="state.projeBaslangic=this.value; calc(); autosave(); renderGate();">
+      </div>
+      <div class="field">
+        <label>Proje Bitiş <span class="req">*</span></label>
+        <input type="date" id="projeBitis" style="width:150px" oninput="state.projeBitis=this.value; calc(); autosave(); renderGate();">
+      </div>
+     <div class="field">
+  <label>Para Birimi</label>
+  <select id="jobParaBirimi" style="width:90px" onchange="state.displayCurrency=this.value; calc(); renderKurNotu();">
+    <option value="TL">₺ TL</option>
+    <option value="USD">$ USD</option>
+    <option value="EUR">€ EUR</option>
+  </select>
+</div>
+    </div>
+
+    <div class="tabs" id="tabs"></div>
+    </div>
+
+    <div id="panels"></div>
+  </div>
+</div>
+
+</div>
+
+<script src="js/simple-mode.js"></script>
+<script src="js/advanced-mode.js"></script>
+<script src="js/excel-export.js"></script>
+<script src="js/shader-bg.js"></script>
+</body>
+</html>
