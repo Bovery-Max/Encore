@@ -130,7 +130,7 @@ function blankState(){
       {kalem:'Elektrik', tutar:0},
       {kalem:'Sigorta', tutar:0}
     ],
-    kurUSD: 33, kurEUR: 36,
+    kurUSD: 50.68, kurEUR: 55.65, // TCMB efektif satış, 23.11.2026
     displayCurrency: 'TL', // 'TL' | 'USD' | 'EUR'
     notlar: '',
     production: {
